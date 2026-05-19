@@ -21,6 +21,9 @@ editors/vscode-lumen/*.vsix
 # benchmark output artifacts
 benchmarks/results/
 
+# dotnet intermediates in benchmark projects
+benchmarks/**/obj/
+
 # generated example binaries
 examples/server_router
 examples/v07_option_result
