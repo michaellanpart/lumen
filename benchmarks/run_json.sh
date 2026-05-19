@@ -18,6 +18,12 @@ cc -O2 -o bin/json-c benchmarks/programs/json_encode.c
 rustc -O -o bin/json-rust benchmarks/programs/json_encode.rs 2>/dev/null
 ./bin/lumen build benchmarks/programs/json_encode.lm -o bin/json-lumen 2>/dev/null
 
+HAS_JAVA=0
+if command -v javac >/dev/null 2>&1 && command -v java >/dev/null 2>&1; then
+    HAS_JAVA=1
+    javac -d bin benchmarks/programs/JsonEncode.java
+fi
+
 echo
 printf '%-8s | %10s\n' lang avg_sec
 printf '%s\n' "---------+-----------"
@@ -41,6 +47,9 @@ bench_one() {
 bench_one c "./bin/json-c"
 bench_one rust "./bin/json-rust"
 bench_one go "./bin/json-go"
+if [ "$HAS_JAVA" = "1" ]; then
+    bench_one java "java -cp ./bin JsonEncode"
+fi
 bench_one lumen "./bin/json-lumen"
 
 echo

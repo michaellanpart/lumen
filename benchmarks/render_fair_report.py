@@ -9,12 +9,13 @@ from pathlib import Path
 from statistics import median
 from typing import Dict, List, Tuple
 
-LANG_ORDER = ["c", "cpp", "rust", "go", "lumen"]
+LANG_ORDER = ["c", "cpp", "rust", "go", "java", "lumen"]
 LANG_COLORS = {
     "c": "#2563eb",
     "cpp": "#0ea5e9",
     "rust": "#f59e0b",
     "go": "#22c55e",
+    "java": "#f97316",
     "lumen": "#ef4444",
 }
 

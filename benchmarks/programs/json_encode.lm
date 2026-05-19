@@ -4,12 +4,9 @@
 // `io_setbuf` runtime builtin so per-call printf cost is amortized.
 
 func main() {
-    io_setbuf(1048576)
     i := 0
     for i < 5000000 {
-        print("{\"id\":")
-        print(i)
-        print(",\"name\":\"alice\",\"active\":true,\"score\":3.14}\n")
+        println(fmt("{\"id\":{},\"name\":\"alice\",\"active\":true,\"score\":3.14}", i))
         i = i + 1
     }
 }

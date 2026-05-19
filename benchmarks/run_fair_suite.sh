@@ -31,8 +31,14 @@ if [ "${QUICK:-0}" = "1" ]; then
     HTTP_REPEATS=1; REPEATS=1; PIPES=1; DUR=2s; WARM=0.5s; SCENARIOS=static
 fi
 OUT="${OUT:-benchmarks/results/fair_suite}"
+RUN_HTTP="${RUN_HTTP:-1}"
 
 mkdir -p "$OUT"
+
+HAS_JAVA=0
+if command -v javac >/dev/null 2>&1 && command -v java >/dev/null 2>&1; then
+    HAS_JAVA=1
+fi
 
 rotate_langs() {
     local csv="$1"
@@ -73,28 +79,56 @@ go build -o bin/json-go ./benchmarks/programs/gojson
 cc -O2 -o bin/json-c benchmarks/programs/json_encode.c
 rustc -O -o bin/json-rust benchmarks/programs/json_encode.rs 2>/dev/null
 ./bin/lumen build benchmarks/programs/json_encode.lm -o bin/json-lumen 2>/dev/null
+if [ "$HAS_JAVA" = "1" ]; then
+    javac -d bin benchmarks/programs/JsonEncode.java
+fi
 
 echo "==> Building math workloads (fib)"
 go build -o bin/fib-go ./benchmarks/programs/gofib
 cc -O2 -o bin/fib-c benchmarks/programs/fib.c
 rustc -O -o bin/fib-rust benchmarks/programs/fib.rs 2>/dev/null
 ./bin/lumen build benchmarks/programs/fib.lm -o bin/fib-lumen 2>/dev/null
+if [ "$HAS_JAVA" = "1" ]; then
+    javac -d bin benchmarks/programs/Fib.java
+fi
 
 echo "==> Building sort workloads"
 go build -o bin/sort-go ./benchmarks/programs/gosort
 cc -O2 -o bin/sort-c benchmarks/programs/sort_ints.c
 rustc -O -o bin/sort-rust benchmarks/programs/sort_ints.rs 2>/dev/null
 ./bin/lumen build benchmarks/programs/sort_ints.lm -o bin/sort-lumen 2>/dev/null
+if [ "$HAS_JAVA" = "1" ]; then
+    javac -d bin benchmarks/programs/SortInts.java
+fi
+
+if [ "$HAS_JAVA" = "1" ]; then
+    FAIR_WORKLOAD_LANGS="c,rust,go,java,lumen"
+    FAIR_HTTP_ONLY="${ONLY:-c,cpp,rust,go,java,lumen}"
+else
+    FAIR_WORKLOAD_LANGS="c,rust,go,lumen"
+    FAIR_HTTP_ONLY="${ONLY:-c,cpp,rust,go,lumen}"
+    echo "==> Java toolchain not found (javac/java); running fair suite without java"
+fi
 
 echo
 printf '%-10s | %-7s | %10s | %10s | %7s\n' workload lang median_s mean_s cv_pct
 printf '%s\n' "-----------+---------+------------+------------+--------"
 
 # HTTP workload (throughput-style). Results kept in a nested folder.
-HTTP_OUT="$OUT/http"
-mkdir -p "$HTTP_OUT"
-SCENARIOS="$SCENARIOS" PIPES="$PIPES" REPEATS="$HTTP_REPEATS" CONC="$CONC" DUR="$DUR" WARM="$WARM" \
-OUT="$HTTP_OUT" ./benchmarks/run_unbiased.sh | tee "$HTTP_OUT/summary.log"
+if [ "$RUN_HTTP" = "1" ]; then
+    HTTP_OUT="$OUT/http"
+    mkdir -p "$HTTP_OUT"
+    set +e
+    SCENARIOS="$SCENARIOS" PIPES="$PIPES" REPEATS="$HTTP_REPEATS" CONC="$CONC" DUR="$DUR" WARM="$WARM" \
+    ONLY="$FAIR_HTTP_ONLY" LANGS="$FAIR_HTTP_ONLY" OUT="$HTTP_OUT" ./benchmarks/run_unbiased.sh | tee "$HTTP_OUT/summary.log"
+    http_rc=$?
+    set -e
+    if [ "$http_rc" -ne 0 ]; then
+        echo "WARNING: HTTP benchmark stage failed (rc=$http_rc); continuing with json/fib/sort workloads"
+    fi
+else
+    echo "==> Skipping HTTP workload (RUN_HTTP=$RUN_HTTP)"
+fi
 
 bench_workload() {
     local workload="$1"
@@ -123,11 +157,14 @@ bench_workload() {
                 fib:c) cmd="./bin/fib-c" ;;
                 fib:rust) cmd="./bin/fib-rust" ;;
                 fib:go) cmd="./bin/fib-go" ;;
+                fib:java) cmd="java -cp ./bin Fib" ;;
                 fib:lumen) cmd="./bin/fib-lumen" ;;
                 sort:c) cmd="./bin/sort-c" ;;
                 sort:rust) cmd="./bin/sort-rust" ;;
                 sort:go) cmd="./bin/sort-go" ;;
+                sort:java) cmd="java -cp ./bin SortInts" ;;
                 sort:lumen) cmd="./bin/sort-lumen" ;;
+                json:java) cmd="java -cp ./bin JsonEncode" ;;
                 *) echo "unsupported workload/lang: $workload/$lang" >&2; exit 1 ;;
             esac
 
@@ -159,9 +196,9 @@ bench_workload() {
     done
 }
 
-bench_workload json "c,rust,go,lumen"
-bench_workload fib "c,rust,go,lumen"
-bench_workload sort "c,rust,go,lumen"
+bench_workload json "$FAIR_WORKLOAD_LANGS"
+bench_workload fib "$FAIR_WORKLOAD_LANGS"
+bench_workload sort "$FAIR_WORKLOAD_LANGS"
 
 echo
 echo "Artifacts: $OUT"

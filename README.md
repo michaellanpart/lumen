@@ -70,6 +70,56 @@ make repl          # interactive REPL
 
 Requires Go 1.22+ and a C compiler (`cc` / `clang` / `gcc`) on `$PATH`.
 
+## Test
+
+```sh
+go test ./...
+```
+
+Or use:
+
+```sh
+make test
+```
+
+## Benchmarks and graphs
+
+Lumen includes a benchmark harness for HTTP throughput + workload timing
+(JSON encode, fib, sort), with a generated HTML report.
+
+Quick run (reduced duration):
+
+```sh
+QUICK=1 ./benchmarks/run_fair_suite.sh
+```
+
+Full fair suite:
+
+```sh
+./benchmarks/run_fair_suite.sh
+```
+
+If you only want workload comparisons (JSON/fib/sort) and to skip HTTP server
+throughput, run:
+
+```sh
+RUN_HTTP=0 ./benchmarks/run_fair_suite.sh
+```
+
+This generates:
+
+- raw artifacts under `benchmarks/results/fair_suite/`
+- visual report at `benchmarks/results/fair_suite/report.html`
+
+Languages currently included in comparison:
+
+- C
+- C++ (HTTP workload)
+- Rust
+- Go
+- Java (when `javac` + `java` are available)
+- Lumen
+
 ## CLI
 
 ```

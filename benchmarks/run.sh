@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # benchmarks/run.sh — Run the API-server shootout.
 #
-# Builds all five servers, launches them one at a time, hits each with
+# Builds all servers, launches them one at a time, hits each with
 # the in-tree load generator, and samples RSS / CPU via `ps`.
 #
 # Usage:
@@ -19,11 +19,29 @@ PIPE="${PIPE:-16}"
 DUR="${DUR:-10s}"
 WARM="${WARM:-1s}"
 ADDR="${ADDR:-127.0.0.1:8080}"
-ONLY="${ONLY:-c,cpp,rust,go,lumen}"
-LANGS="${LANGS:-c,cpp,rust,go,lumen}"
+ONLY="${ONLY:-c,cpp,rust,go,lumen,java}"
+LANGS="${LANGS:-c,cpp,rust,go,lumen,java}"
 SCENARIO="${SCENARIO:-static}"
 OUT="$ROOT/benchmarks/results/$SCENARIO"
 mkdir -p "$OUT" "$ROOT/bin"
+
+HAS_JAVA=0
+if command -v javac >/dev/null 2>&1 && command -v java >/dev/null 2>&1; then
+    HAS_JAVA=1
+fi
+
+if [ "$HAS_JAVA" != "1" ]; then
+    ONLY=",$ONLY,"
+    ONLY="${ONLY//,java,/,}"
+    ONLY="${ONLY#,}"
+    ONLY="${ONLY%,}"
+
+    LANGS=",$LANGS,"
+    LANGS="${LANGS//,java,/,}"
+    LANGS="${LANGS#,}"
+    LANGS="${LANGS%,}"
+    echo "==> Java toolchain not found (javac/java); skipping java benchmark target"
+fi
 
 echo "==> Building toolchain & servers (scenario=$SCENARIO)"
 go build -o bin/lumen        ./cmd/lumen
@@ -35,12 +53,18 @@ if [ "$SCENARIO" = "static" ]; then
     c++ -O2 -std=c++17 -o bin/server-cpp benchmarks/servers/cpp/server.cpp
     rustc -O -o bin/server-rust benchmarks/servers/rust/server.rs 2>/dev/null
     ./bin/lumen build benchmarks/servers/lumen/server.lm -o bin/server-lumen 2>/dev/null
+    if [ "$HAS_JAVA" = "1" ]; then
+        javac -d bin benchmarks/servers/java/ServerStatic.java
+    fi
 elif [ "$SCENARIO" = "dynamic" ]; then
     go build -o bin/server-go    ./benchmarks/servers/go_dynamic
     cc  -O2 -o bin/server-c      benchmarks/servers/c/server_dynamic.c -lpthread
     c++ -O2 -std=c++17 -o bin/server-cpp benchmarks/servers/cpp/server_dynamic.cpp
     rustc -O -o bin/server-rust benchmarks/servers/rust/server_dynamic.rs 2>/dev/null
     ./bin/lumen build benchmarks/servers/lumen/server_dynamic.lm -o bin/server-lumen 2>/dev/null
+    if [ "$HAS_JAVA" = "1" ]; then
+        javac -d bin benchmarks/servers/java/ServerDynamic.java
+    fi
 else
     echo "unknown SCENARIO=$SCENARIO (expected: static|dynamic)" >&2
     exit 1
@@ -134,6 +158,13 @@ for lang in ${LANGS//,/ }; do
         rust)  run_one rust  "./bin/server-rust 127.0.0.1 8080" ;;
         go)    run_one go    "./bin/server-go   127.0.0.1:8080" ;;
         lumen) run_one lumen "./bin/server-lumen" ;;
+        java)
+            if [ "$SCENARIO" = "static" ]; then
+                run_one java "java -cp ./bin ServerStatic 127.0.0.1 8080"
+            else
+                run_one java "java -cp ./bin ServerDynamic 127.0.0.1 8080"
+            fi
+            ;;
         *) echo "unknown language in LANGS: $lang" >&2; exit 1 ;;
     esac
 done
