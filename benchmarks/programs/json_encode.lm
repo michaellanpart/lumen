@@ -6,7 +6,9 @@
 func main() {
     i := 0
     for i < 5000000 {
-        println(fmt("{\"id\":{},\"name\":\"alice\",\"active\":true,\"score\":3.14}", i))
+        print("{\"id\":")
+        print(i)
+        print(",\"name\":\"alice\",\"active\":true,\"score\":3.14}\n")
         i = i + 1
     }
 }

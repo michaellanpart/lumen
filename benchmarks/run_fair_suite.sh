@@ -25,6 +25,7 @@ PIPES="${PIPES:-1,16}"
 CONC="${CONC:-64}"
 DUR="${DUR:-5s}"
 WARM="${WARM:-1s}"
+WORKLOAD_WARMUPS="${WORKLOAD_WARMUPS:-1}"
 
 # Quick-mode: QUICK=1 ./benchmarks/run_fair_suite.sh
 if [ "${QUICK:-0}" = "1" ]; then
@@ -78,6 +79,35 @@ run_timed_cmd() {
     local out_time="$2"
     /usr/bin/time -p sh -c "$cmd >/dev/null" 2> "$out_time"
     awk '/^real /{print $2}' "$out_time"
+}
+
+workload_cmd() {
+    local workload="$1"
+    local lang="$2"
+    case "$workload:$lang" in
+        json:c) echo "./bin/json-c" ;;
+        json:rust) echo "./bin/json-rust" ;;
+        json:go) echo "./bin/json-go" ;;
+        json:lumen) echo "./bin/json-lumen" ;;
+        json:csharp) echo "./bin/json-csharp/json" ;;
+        json:java) echo "java -cp ./bin JsonEncode" ;;
+        fib:c) echo "./bin/fib-c" ;;
+        fib:rust) echo "./bin/fib-rust" ;;
+        fib:go) echo "./bin/fib-go" ;;
+        fib:java) echo "java -cp ./bin Fib" ;;
+        fib:lumen) echo "./bin/fib-lumen" ;;
+        fib:csharp) echo "./bin/fib-csharp/fib" ;;
+        sort:c) echo "./bin/sort-c" ;;
+        sort:rust) echo "./bin/sort-rust" ;;
+        sort:go) echo "./bin/sort-go" ;;
+        sort:java) echo "java -cp ./bin SortInts" ;;
+        sort:lumen) echo "./bin/sort-lumen" ;;
+        sort:csharp) echo "./bin/sort-csharp/sort" ;;
+        *)
+            echo "unsupported workload/lang: $workload/$lang" >&2
+            return 1
+            ;;
+    esac
 }
 
 echo "==> Building common toolchain"
@@ -166,6 +196,15 @@ bench_workload() {
 
     local first_chk=""
 
+    if [ "$WORKLOAD_WARMUPS" -gt 0 ]; then
+        for lang in ${langs//,/ }; do
+            cmd=$(workload_cmd "$workload" "$lang")
+            for _ in $(seq 1 "$WORKLOAD_WARMUPS"); do
+                sh -c "$cmd >/dev/null"
+            done
+        done
+    fi
+
     for r in $(seq 1 "$REPEATS"); do
         local order
         order=$(rotate_langs "$langs" $((r - 1)))
@@ -174,28 +213,8 @@ bench_workload() {
             local chk_file="$case_dir/$lang.chk"
             mkdir -p "$case_dir/r${r}"
 
-            local cmd=""
-            case "$workload:$lang" in
-                json:c) cmd="./bin/json-c" ;;
-                json:rust) cmd="./bin/json-rust" ;;
-                json:go) cmd="./bin/json-go" ;;
-                json:lumen) cmd="./bin/json-lumen" ;;
-                json:csharp) cmd="./bin/json-csharp/json" ;;
-                fib:c) cmd="./bin/fib-c" ;;
-                fib:rust) cmd="./bin/fib-rust" ;;
-                fib:go) cmd="./bin/fib-go" ;;
-                fib:java) cmd="java -cp ./bin Fib" ;;
-                fib:lumen) cmd="./bin/fib-lumen" ;;
-                fib:csharp) cmd="./bin/fib-csharp/fib" ;;
-                sort:c) cmd="./bin/sort-c" ;;
-                sort:rust) cmd="./bin/sort-rust" ;;
-                sort:go) cmd="./bin/sort-go" ;;
-                sort:java) cmd="java -cp ./bin SortInts" ;;
-                sort:lumen) cmd="./bin/sort-lumen" ;;
-                sort:csharp) cmd="./bin/sort-csharp/sort" ;;
-                json:java) cmd="java -cp ./bin JsonEncode" ;;
-                *) echo "unsupported workload/lang: $workload/$lang" >&2; exit 1 ;;
-            esac
+            local cmd
+            cmd=$(workload_cmd "$workload" "$lang")
 
             t=$(run_timed_cmd "$cmd" "$case_dir/r${r}/${lang}.time")
             echo "$t" >> "$vals_file"
