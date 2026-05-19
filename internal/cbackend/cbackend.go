@@ -1231,6 +1231,64 @@ func (e *emitter) emitCallExpr(c *ast.Call) (string, error) {
 		}
 		return fmt.Sprintf("Lm_parse_int(%s)", v), nil
 	}
+	if ok && id.Name == "http_serve" {
+		if len(c.Args) != 3 {
+			return "", fmt.Errorf("cbackend: http_serve expects exactly 3 args")
+		}
+		host, err := e.emitArg(c.Args[0])
+		if err != nil {
+			return "", err
+		}
+		port, err := e.emitArg(c.Args[1])
+		if err != nil {
+			return "", err
+		}
+		body, err := e.emitArg(c.Args[2])
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("Lm_http_serve(%s, %s, %s)", host, port, body), nil
+	}
+	if ok && id.Name == "http_serve_req" {
+		if len(c.Args) != 3 {
+			return "", fmt.Errorf("cbackend: http_serve_req expects exactly 3 args")
+		}
+		host, err := e.emitArg(c.Args[0])
+		if err != nil {
+			return "", err
+		}
+		port, err := e.emitArg(c.Args[1])
+		if err != nil {
+			return "", err
+		}
+		handler, err := e.emitArg(c.Args[2])
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("Lm_http_serve_req(%s, %s, %s)", host, port, handler), nil
+	}
+	if ok && id.Name == "http_serve_fn" {
+		if len(c.Args) != 4 {
+			return "", fmt.Errorf("cbackend: http_serve_fn expects exactly 4 args")
+		}
+		host, err := e.emitArg(c.Args[0])
+		if err != nil {
+			return "", err
+		}
+		port, err := e.emitArg(c.Args[1])
+		if err != nil {
+			return "", err
+		}
+		handler, err := e.emitArg(c.Args[2])
+		if err != nil {
+			return "", err
+		}
+		svc, err := e.emitArg(c.Args[3])
+		if err != nil {
+			return "", err
+		}
+		return fmt.Sprintf("Lm_http_serve_fn(%s, %s, %s, %s)", host, port, handler, svc), nil
+	}
 	if ok {
 		if sig, isGlobalFn := e.info.Fns[id.Name]; !isGlobalFn || sig.Owner != "" {
 			ok = false
