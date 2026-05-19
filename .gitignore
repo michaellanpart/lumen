@@ -20,3 +20,9 @@ editors/vscode-lumen/*.vsix
 
 # benchmark output artifacts
 benchmarks/results/
+
+# generated example binaries
+examples/server_router
+examples/v07_option_result
+examples/v07_service
+examples/v08_string_methods
