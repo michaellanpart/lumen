@@ -19,8 +19,8 @@ PIPE="${PIPE:-16}"
 DUR="${DUR:-10s}"
 WARM="${WARM:-1s}"
 ADDR="${ADDR:-127.0.0.1:8080}"
-ONLY="${ONLY:-c,cpp,rust,go,lumen,java}"
-LANGS="${LANGS:-c,cpp,rust,go,lumen,java}"
+ONLY="${ONLY:-c,cpp,rust,go,java,csharp,lumen}"
+LANGS="${LANGS:-c,cpp,rust,go,java,csharp,lumen}"
 SCENARIO="${SCENARIO:-static}"
 OUT="$ROOT/benchmarks/results/$SCENARIO"
 mkdir -p "$OUT" "$ROOT/bin"
@@ -28,6 +28,11 @@ mkdir -p "$OUT" "$ROOT/bin"
 HAS_JAVA=0
 if command -v javac >/dev/null 2>&1 && command -v java >/dev/null 2>&1; then
     HAS_JAVA=1
+fi
+
+HAS_CSHARP=0
+if command -v dotnet >/dev/null 2>&1; then
+    HAS_CSHARP=1
 fi
 
 if [ "$HAS_JAVA" != "1" ]; then
@@ -43,6 +48,19 @@ if [ "$HAS_JAVA" != "1" ]; then
     echo "==> Java toolchain not found (javac/java); skipping java benchmark target"
 fi
 
+if [ "$HAS_CSHARP" != "1" ]; then
+    ONLY=",$ONLY,"
+    ONLY="${ONLY//,csharp,/,}"
+    ONLY="${ONLY#,}"
+    ONLY="${ONLY%,}"
+
+    LANGS=",$LANGS,"
+    LANGS="${LANGS//,csharp,/,}"
+    LANGS="${LANGS#,}"
+    LANGS="${LANGS%,}"
+    echo "==> dotnet not found; skipping csharp benchmark target"
+fi
+
 echo "==> Building toolchain & servers (scenario=$SCENARIO)"
 go build -o bin/lumen        ./cmd/lumen
 go build -o bin/loadgen      ./benchmarks/loadgen
@@ -56,6 +74,9 @@ if [ "$SCENARIO" = "static" ]; then
     if [ "$HAS_JAVA" = "1" ]; then
         javac -d bin benchmarks/servers/java/ServerStatic.java
     fi
+    if [ "$HAS_CSHARP" = "1" ]; then
+        dotnet publish -c Release -o bin/server-csharp benchmarks/servers/csharp/static/static.csproj >/dev/null
+    fi
 elif [ "$SCENARIO" = "dynamic" ]; then
     go build -o bin/server-go    ./benchmarks/servers/go_dynamic
     cc  -O2 -o bin/server-c      benchmarks/servers/c/server_dynamic.c -lpthread
@@ -64,6 +85,9 @@ elif [ "$SCENARIO" = "dynamic" ]; then
     ./bin/lumen build benchmarks/servers/lumen/server_dynamic.lm -o bin/server-lumen 2>/dev/null
     if [ "$HAS_JAVA" = "1" ]; then
         javac -d bin benchmarks/servers/java/ServerDynamic.java
+    fi
+    if [ "$HAS_CSHARP" = "1" ]; then
+        dotnet publish -c Release -o bin/server-csharp benchmarks/servers/csharp/dynamic/dynamic.csproj >/dev/null
     fi
 else
     echo "unknown SCENARIO=$SCENARIO (expected: static|dynamic)" >&2
@@ -163,6 +187,13 @@ for lang in ${LANGS//,/ }; do
                 run_one java "java -cp ./bin ServerStatic 127.0.0.1 8080"
             else
                 run_one java "java -cp ./bin ServerDynamic 127.0.0.1 8080"
+            fi
+            ;;
+        csharp)
+            if [ "$SCENARIO" = "static" ]; then
+                run_one csharp "./bin/server-csharp/static 127.0.0.1 8080"
+            else
+                run_one csharp "./bin/server-csharp/dynamic 127.0.0.1 8080"
             fi
             ;;
         *) echo "unknown language in LANGS: $lang" >&2; exit 1 ;;

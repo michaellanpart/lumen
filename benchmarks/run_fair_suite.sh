@@ -40,6 +40,11 @@ if command -v javac >/dev/null 2>&1 && command -v java >/dev/null 2>&1; then
     HAS_JAVA=1
 fi
 
+HAS_CSHARP=0
+if command -v dotnet >/dev/null 2>&1; then
+    HAS_CSHARP=1
+fi
+
 rotate_langs() {
     local csv="$1"
     local shift="$2"
@@ -82,6 +87,9 @@ rustc -O -o bin/json-rust benchmarks/programs/json_encode.rs 2>/dev/null
 if [ "$HAS_JAVA" = "1" ]; then
     javac -d bin benchmarks/programs/JsonEncode.java
 fi
+if [ "$HAS_CSHARP" = "1" ]; then
+    dotnet publish -c Release -o bin/json-csharp benchmarks/programs/csharp/json/json.csproj >/dev/null
+fi
 
 echo "==> Building math workloads (fib)"
 go build -o bin/fib-go ./benchmarks/programs/gofib
@@ -90,6 +98,9 @@ rustc -O -o bin/fib-rust benchmarks/programs/fib.rs 2>/dev/null
 ./bin/lumen build benchmarks/programs/fib.lm -o bin/fib-lumen 2>/dev/null
 if [ "$HAS_JAVA" = "1" ]; then
     javac -d bin benchmarks/programs/Fib.java
+fi
+if [ "$HAS_CSHARP" = "1" ]; then
+    dotnet publish -c Release -o bin/fib-csharp benchmarks/programs/csharp/fib/fib.csproj >/dev/null
 fi
 
 echo "==> Building sort workloads"
@@ -100,14 +111,25 @@ rustc -O -o bin/sort-rust benchmarks/programs/sort_ints.rs 2>/dev/null
 if [ "$HAS_JAVA" = "1" ]; then
     javac -d bin benchmarks/programs/SortInts.java
 fi
+if [ "$HAS_CSHARP" = "1" ]; then
+    dotnet publish -c Release -o bin/sort-csharp benchmarks/programs/csharp/sort/sort.csproj >/dev/null
+fi
+
+FAIR_WORKLOAD_LANGS="c,rust,go,lumen"
+FAIR_HTTP_ONLY="${ONLY:-c,cpp,rust,go,lumen}"
 
 if [ "$HAS_JAVA" = "1" ]; then
-    FAIR_WORKLOAD_LANGS="c,rust,go,java,lumen"
-    FAIR_HTTP_ONLY="${ONLY:-c,cpp,rust,go,java,lumen}"
+    FAIR_WORKLOAD_LANGS="$FAIR_WORKLOAD_LANGS,java"
+    FAIR_HTTP_ONLY="${FAIR_HTTP_ONLY%,},java"
 else
-    FAIR_WORKLOAD_LANGS="c,rust,go,lumen"
-    FAIR_HTTP_ONLY="${ONLY:-c,cpp,rust,go,lumen}"
     echo "==> Java toolchain not found (javac/java); running fair suite without java"
+fi
+
+if [ "$HAS_CSHARP" = "1" ]; then
+    FAIR_WORKLOAD_LANGS="$FAIR_WORKLOAD_LANGS,csharp"
+    FAIR_HTTP_ONLY="${FAIR_HTTP_ONLY%,},csharp"
+else
+    echo "==> dotnet not found; running fair suite without csharp"
 fi
 
 echo
@@ -154,16 +176,19 @@ bench_workload() {
                 json:rust) cmd="./bin/json-rust" ;;
                 json:go) cmd="./bin/json-go" ;;
                 json:lumen) cmd="./bin/json-lumen" ;;
+                json:csharp) cmd="./bin/json-csharp/json" ;;
                 fib:c) cmd="./bin/fib-c" ;;
                 fib:rust) cmd="./bin/fib-rust" ;;
                 fib:go) cmd="./bin/fib-go" ;;
                 fib:java) cmd="java -cp ./bin Fib" ;;
                 fib:lumen) cmd="./bin/fib-lumen" ;;
+                fib:csharp) cmd="./bin/fib-csharp/fib" ;;
                 sort:c) cmd="./bin/sort-c" ;;
                 sort:rust) cmd="./bin/sort-rust" ;;
                 sort:go) cmd="./bin/sort-go" ;;
                 sort:java) cmd="java -cp ./bin SortInts" ;;
                 sort:lumen) cmd="./bin/sort-lumen" ;;
+                sort:csharp) cmd="./bin/sort-csharp/sort" ;;
                 json:java) cmd="java -cp ./bin JsonEncode" ;;
                 *) echo "unsupported workload/lang: $workload/$lang" >&2; exit 1 ;;
             esac

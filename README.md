@@ -118,6 +118,7 @@ Languages currently included in comparison:
 - Rust
 - Go
 - Java (when `javac` + `java` are available)
+- C# (when `dotnet` is available)
 - Lumen
 
 ## CLI

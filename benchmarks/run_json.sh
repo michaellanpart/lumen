@@ -24,6 +24,12 @@ if command -v javac >/dev/null 2>&1 && command -v java >/dev/null 2>&1; then
     javac -d bin benchmarks/programs/JsonEncode.java
 fi
 
+HAS_CSHARP=0
+if command -v dotnet >/dev/null 2>&1; then
+    HAS_CSHARP=1
+    dotnet publish -c Release -o bin/json-csharp benchmarks/programs/csharp/json/json.csproj >/dev/null
+fi
+
 echo
 printf '%-8s | %10s\n' lang avg_sec
 printf '%s\n' "---------+-----------"
@@ -49,6 +55,9 @@ bench_one rust "./bin/json-rust"
 bench_one go "./bin/json-go"
 if [ "$HAS_JAVA" = "1" ]; then
     bench_one java "java -cp ./bin JsonEncode"
+fi
+if [ "$HAS_CSHARP" = "1" ]; then
+    bench_one csharp "./bin/json-csharp/json"
 fi
 bench_one lumen "./bin/json-lumen"
 
