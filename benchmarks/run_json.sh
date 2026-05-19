@@ -25,9 +25,15 @@ if command -v javac >/dev/null 2>&1 && command -v java >/dev/null 2>&1; then
 fi
 
 HAS_CSHARP=0
+DOTNET_BIN="dotnet"
 if command -v dotnet >/dev/null 2>&1; then
     HAS_CSHARP=1
-    dotnet publish -c Release -o bin/json-csharp benchmarks/programs/csharp/json/json.csproj >/dev/null
+elif [ -x "/usr/local/share/dotnet/dotnet" ]; then
+    HAS_CSHARP=1
+    DOTNET_BIN="/usr/local/share/dotnet/dotnet"
+fi
+if [ "$HAS_CSHARP" = "1" ]; then
+    "$DOTNET_BIN" publish -c Release -o bin/json-csharp benchmarks/programs/csharp/json/json.csproj >/dev/null
 fi
 
 echo

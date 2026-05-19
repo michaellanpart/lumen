@@ -31,8 +31,12 @@ if command -v javac >/dev/null 2>&1 && command -v java >/dev/null 2>&1; then
 fi
 
 HAS_CSHARP=0
+DOTNET_BIN="dotnet"
 if command -v dotnet >/dev/null 2>&1; then
     HAS_CSHARP=1
+elif [ -x "/usr/local/share/dotnet/dotnet" ]; then
+    HAS_CSHARP=1
+    DOTNET_BIN="/usr/local/share/dotnet/dotnet"
 fi
 
 if [ "$HAS_JAVA" != "1" ]; then
@@ -75,7 +79,7 @@ if [ "$SCENARIO" = "static" ]; then
         javac -d bin benchmarks/servers/java/ServerStatic.java
     fi
     if [ "$HAS_CSHARP" = "1" ]; then
-        dotnet publish -c Release -o bin/server-csharp benchmarks/servers/csharp/static/static.csproj >/dev/null
+        "$DOTNET_BIN" publish -c Release -o bin/server-csharp benchmarks/servers/csharp/static/static.csproj >/dev/null
     fi
 elif [ "$SCENARIO" = "dynamic" ]; then
     go build -o bin/server-go    ./benchmarks/servers/go_dynamic
@@ -87,7 +91,7 @@ elif [ "$SCENARIO" = "dynamic" ]; then
         javac -d bin benchmarks/servers/java/ServerDynamic.java
     fi
     if [ "$HAS_CSHARP" = "1" ]; then
-        dotnet publish -c Release -o bin/server-csharp benchmarks/servers/csharp/dynamic/dynamic.csproj >/dev/null
+        "$DOTNET_BIN" publish -c Release -o bin/server-csharp benchmarks/servers/csharp/dynamic/dynamic.csproj >/dev/null
     fi
 else
     echo "unknown SCENARIO=$SCENARIO (expected: static|dynamic)" >&2
