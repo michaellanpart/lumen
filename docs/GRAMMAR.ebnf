@@ -1,0 +1,141 @@
+(* Lumen Language Grammar — EBNF, v0.1
+   The reference parser implements a slightly relaxed superset of this;
+   precedence is encoded in the Pratt parser, not here. *)
+
+Program        = { Item } ;
+
+Item           = FnDecl
+               | LetDecl
+               | ConstDecl
+               | StructDecl
+               | EnumDecl
+               | TraitDecl
+               | ImplBlock
+               | TypeAlias
+               | UseDecl
+               | ModDecl
+               | ExternBlock ;
+
+(* --- Declarations --- *)
+
+FnDecl         = [ "pub" ] [ "comptime" ] "fn" Ident [ Generics ]
+                 "(" [ ParamList ] ")" [ "->" Type ] [ WhereClause ] Block ;
+
+ParamList      = Param { "," Param } ;
+Param          = ( "self" | "&" [ "mut" ] "self" | Ident ":" Type ) ;
+
+LetDecl        = "let" [ "mut" ] Pattern [ ":" Type ] "=" Expr ";" ;
+ConstDecl      = [ "pub" ] "const" Ident ":" Type "=" Expr ";" ;
+
+StructDecl     = [ "pub" ] "struct" Ident [ Generics ]
+                 ( "{" [ FieldList ] "}" | "(" [ TypeList ] ")" ";" | ";" ) ;
+FieldList      = Field { "," Field } [ "," ] ;
+Field          = [ "pub" ] Ident ":" Type ;
+
+EnumDecl       = [ "pub" ] "enum" Ident [ Generics ] "{" [ VariantList ] "}" ;
+VariantList    = Variant { "," Variant } [ "," ] ;
+Variant        = Ident [ "(" TypeList ")" | "{" FieldList "}" ] ;
+
+TraitDecl      = [ "pub" ] "trait" Ident [ Generics ] [ ":" TypeBounds ]
+                 "{" { TraitItem } "}" ;
+TraitItem      = FnDecl | "type" Ident ";" ;
+
+ImplBlock      = "impl" [ Generics ] [ Type "for" ] Type [ WhereClause ]
+                 "{" { FnDecl } "}" ;
+
+TypeAlias      = [ "pub" ] "type" Ident [ Generics ] "=" Type ";" ;
+UseDecl        = "use" Path ";" ;
+ModDecl        = [ "pub" ] "mod" Ident ( ";" | "{" Program "}" ) ;
+ExternBlock    = "extern" String "{" { FnDecl | StaticDecl } "}" ;
+
+(* --- Generics --- *)
+
+Generics       = "<" GenericParam { "," GenericParam } ">" ;
+GenericParam   = [ "comptime" ] Ident [ ":" TypeBounds ] ;
+TypeBounds     = Type { "+" Type } ;
+WhereClause    = "where" WhereItem { "," WhereItem } ;
+WhereItem      = Type ":" TypeBounds ;
+
+(* --- Types --- *)
+
+Type           = Path [ "<" TypeList ">" ]
+               | "&" [ "mut" ] Type
+               | "*" ( "const" | "mut" ) Type
+               | "[" Type [ ";" Expr ] "]"
+               | "(" [ TypeList ] ")"
+               | "fn" "(" [ TypeList ] ")" [ "->" Type ]
+               | "chan" "<" Type ">"
+               | RefinementType ;
+RefinementType = "{" Ident ":" Type "|" Expr "}" ;
+TypeList       = Type { "," Type } ;
+Path           = Ident { "::" Ident } ;
+
+(* --- Patterns --- *)
+
+Pattern        = "_"
+               | Literal
+               | Ident [ "@" Pattern ]
+               | Path [ "{" FieldPatList "}" | "(" PatternList ")" ]
+               | "(" PatternList ")"
+               | "[" [ PatternList ] "]"
+               | Pattern "|" Pattern ;
+PatternList    = Pattern { "," Pattern } ;
+FieldPatList   = Ident [ ":" Pattern ] { "," Ident [ ":" Pattern ] } ;
+
+(* --- Expressions (precedence handled by Pratt parser) --- *)
+
+Expr           = Assign ;
+Assign         = LogicOr [ AssignOp Assign ] ;
+AssignOp       = "=" | "+=" | "-=" | "*=" | "/=" | "%=" | "&=" | "|=" | "^=" | "<<=" | ">>=" ;
+LogicOr        = LogicAnd { "||" LogicAnd } ;
+LogicAnd       = Compare  { "&&" Compare  } ;
+Compare        = BitOr    { ("=="|"!="|"<"|"<="|">"|">=") BitOr } ;
+BitOr          = BitXor   { "|"  BitXor } ;
+BitXor         = BitAnd   { "^"  BitAnd } ;
+BitAnd         = Shift    { "&"  Shift  } ;
+Shift          = Add      { ("<<"|">>") Add } ;
+Add            = Mul      { ("+"|"-")   Mul } ;
+Mul            = Cast     { ("*"|"/"|"%") Cast } ;
+Cast           = Unary    { "as" Type } ;
+Unary          = ("-"|"!"|"&"|"&" "mut"|"*") Unary | Postfix ;
+Postfix        = Primary { "." Ident
+                          | "." Int
+                          | "(" [ ArgList ] ")"
+                          | "[" Expr "]"
+                          | "?" } ;
+Primary        = Literal
+               | Path [ StructInit ]
+               | "(" Expr { "," Expr } ")"
+               | "[" [ ArgList ] "]"
+               | Block
+               | IfExpr
+               | MatchExpr
+               | WhileExpr
+               | ForExpr
+               | LoopExpr
+               | "return" [ Expr ]
+               | "break" [ Expr ]
+               | "continue"
+               | "spawn" Block
+               | SelectExpr
+               | Lambda ;
+
+StructInit     = "{" FieldInitList "}" ;
+FieldInitList  = FieldInit { "," FieldInit } [ "," ] ;
+FieldInit      = Ident [ ":" Expr ] ;
+
+ArgList        = Expr { "," Expr } ;
+Block          = "{" { Stmt } [ Expr ] "}" ;
+Stmt           = LetDecl | Item | Expr ";" ;
+
+IfExpr         = "if" Expr Block [ "else" ( IfExpr | Block ) ] ;
+MatchExpr      = "match" Expr "{" { MatchArm } "}" ;
+MatchArm       = Pattern [ "if" Expr ] "=>" Expr "," ;
+WhileExpr      = "while" Expr Block ;
+ForExpr        = "for" Pattern "in" Expr Block ;
+LoopExpr       = "loop" Block ;
+SelectExpr     = "select" "{" { SelectArm } "}" ;
+SelectArm      = Expr "=>" Expr "," ;
+Lambda         = [ "move" ] "|" [ ParamList ] "|" Expr ;
+
+Literal        = Int | Float | String | Char | "true" | "false" | "(" ")" ;

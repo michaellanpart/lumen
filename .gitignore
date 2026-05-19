@@ -1,0 +1,22 @@
+bin/
+*.o
+*.a
+
+# macOS / editor
+.DS_Store
+.vscode/
+
+# logs / temp
+*.log
+*.tmp
+
+# local build binaries
+/lumen
+/lumen-lsp
+
+# VS Code extension artifacts
+editors/vscode-lumen/node_modules/
+editors/vscode-lumen/*.vsix
+
+# benchmark output artifacts
+benchmarks/results/

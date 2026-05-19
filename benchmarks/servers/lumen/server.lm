@@ -1,0 +1,12 @@
+// HTTP/1.1 "hello\n" server in Lumen (v0.7 syntax).
+//
+// Lowers to the same pthread-per-connection BSD-socket loop as
+// benchmarks/servers/c/server.c via the runtime builtin `http_serve`
+// (see runtime/lumen.h -> Lm_http_serve).
+//
+// Build: ./bin/lumen build benchmarks/servers/lumen/server.lm -o bin/server-lumen
+// Run:   ./bin/server-lumen
+
+func main() {
+    http_serve("127.0.0.1", 8080, "hello\n")
+}

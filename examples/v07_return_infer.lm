@@ -1,0 +1,65 @@
+// v0.7: return-type inference + trailing-expression as block value.
+//
+// Every function below omits both the return type AND the `return`
+// keyword. The parser promotes the trailing expression to the block's
+// tail; the type checker infers the function's return type from it.
+
+type Point struct {
+    x int64
+    y int64
+}
+
+// Tail is a literal => inferred i64.
+func one() {
+    1
+}
+
+// Param passthrough => inferred i64.
+func id(x int64) {
+    x
+}
+
+// Struct literal => inferred Point.
+func origin() {
+    Point{x: 0, y: 0}
+}
+
+// Forward call resolved at fixpoint => inferred i64.
+func sum_of_squares(a int64, b int64) {
+    square(a) + square(b)
+}
+
+// Defined after the caller — fixpoint handles forward references.
+func square(x int64) {
+    x * x
+}
+
+// Value receiver, omitted return — inferred i64.
+func (p Point) magnitude_sq() {
+    p.x * p.x + p.y * p.y
+}
+
+type Maybe enum {
+    None
+    Some(int64)
+}
+
+// Switch is a block-shaped tail; first arm type wins.
+func unwrap_or(m Maybe, d int64) {
+    switch m {
+    case Maybe::None: d
+    case Maybe::Some(v): v
+    }
+}
+
+func main() {
+    println(one())                         // 1
+    println(id(42))                        // 42
+    o := origin()
+    println(o.x, o.y)                      // 0 0
+    println(sum_of_squares(3, 4))          // 25
+    p := Point{x: 3, y: 4}
+    println(p.magnitude_sq())              // 25
+    println(unwrap_or(Maybe::Some(7), 0))  // 7
+    println(unwrap_or(Maybe::None, 99))    // 99
+}

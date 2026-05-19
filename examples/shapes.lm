@@ -1,0 +1,52 @@
+// Structs, enums, methods, traits, generics, Option, and the `?` operator.
+
+struct Point { x: f64, y: f64 }
+
+impl Point {
+    fn new(x: f64, y: f64) -> Point { Point { x: x, y: y } }
+    fn norm_sq(self) -> f64 { self.x * self.x + self.y * self.y }
+}
+
+enum Shape {
+    Circle(f64),
+    Rect { w: f64, h: f64 },
+    Point,
+}
+
+fn area(s: Shape) -> f64 {
+    match s {
+        Shape::Circle(r)       => 3.14159265 * r * r,
+        Shape::Rect { w, h }   => w * h,
+        Shape::Point           => 0.0,
+    }
+}
+
+fn first_positive(xs: Vec) -> Option {
+    for x in xs {
+        if x > 0 { return Some(x); }
+    }
+    None
+}
+
+fn checked_div(a: i64, b: i64) -> Result {
+    if b == 0 { Err("division by zero") } else { Ok(a / b) }
+}
+
+fn safe(a: i64, b: i64, c: i64) -> Result {
+    let x = checked_div(a, b)?;
+    let y = checked_div(x, c)?;
+    Ok(y)
+}
+
+fn main() {
+    let p = Point::new(3.0, 4.0);
+    println("|p|^2 =", p.norm_sq());
+
+    println("area(circle 2) =", area(Shape::Circle(2.0)));
+    println("area(rect 3x4) =", area(Shape::Rect { w: 3.0, h: 4.0 }));
+
+    println("first positive of [-1, -2, 7, 3]:", first_positive(Vec(-1, -2, 7, 3)));
+
+    println("safe(20, 5, 2) =", safe(20, 5, 2));
+    println("safe(20, 0, 2) =", safe(20, 0, 2));
+}

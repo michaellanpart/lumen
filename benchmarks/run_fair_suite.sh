@@ -1,0 +1,169 @@
+#!/usr/bin/env bash
+# benchmarks/run_fair_suite.sh — multi-workload, lower-bias perf suite.
+#
+# Workloads:
+#   - HTTP: uses run_unbiased.sh (repeats + order rotation)
+#   - JSON encode: repeated wall-clock timing
+#   - Math (fib): repeated wall-clock timing
+#   - Sorting (ints): repeated wall-clock timing
+#
+# Fairness controls:
+#   - Repeated runs
+#   - Rotated language order per repeat
+#   - Median and coefficient of variation (cv%)
+#   - Deterministic input + checksum validation where applicable
+
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+
+REPEATS="${REPEATS:-5}"
+HTTP_REPEATS="${HTTP_REPEATS:-3}"
+SCENARIOS="${SCENARIOS:-static}"
+PIPES="${PIPES:-1,16}"
+CONC="${CONC:-64}"
+DUR="${DUR:-5s}"
+WARM="${WARM:-1s}"
+
+# Quick-mode: QUICK=1 ./benchmarks/run_fair_suite.sh
+if [ "${QUICK:-0}" = "1" ]; then
+    HTTP_REPEATS=1; REPEATS=1; PIPES=1; DUR=2s; WARM=0.5s; SCENARIOS=static
+fi
+OUT="${OUT:-benchmarks/results/fair_suite}"
+
+mkdir -p "$OUT"
+
+rotate_langs() {
+    local csv="$1"
+    local shift="$2"
+    local IFS=','
+    read -r -a arr <<< "$csv"
+    local n=${#arr[@]}
+    shift=$((shift % n))
+    local out=()
+    for ((i = 0; i < n; i++)); do
+        out+=("${arr[$(((i + shift) % n))]}")
+    done
+    local joined
+    joined=$(IFS=,; echo "${out[*]}")
+    echo "$joined"
+}
+
+median_sorted_stream() {
+    awk '{a[NR]=$1} END{if(NR==0){print "0"; exit} if(NR%2==1) printf "%.4f", a[(NR+1)/2]; else printf "%.4f", (a[NR/2]+a[NR/2+1])/2.0}'
+}
+
+stats_mean_cv() {
+    awk '{s+=$1; ss+=$1*$1; n++} END{if(n==0){print "0.0000 0.00"; exit} m=s/n; v=(ss/n)-(m*m); if(v<0)v=0; sd=sqrt(v); cv=(m>0? (sd*100.0/m):0); printf "%.4f %.2f", m, cv}'
+}
+
+run_timed_cmd() {
+    local cmd="$1"
+    local out_time="$2"
+    /usr/bin/time -p sh -c "$cmd >/dev/null" 2> "$out_time"
+    awk '/^real /{print $2}' "$out_time"
+}
+
+echo "==> Building common toolchain"
+go build -o bin/lumen ./cmd/lumen
+
+echo "==> Building JSON workloads"
+go build -o bin/json-go ./benchmarks/programs/gojson
+cc -O2 -o bin/json-c benchmarks/programs/json_encode.c
+rustc -O -o bin/json-rust benchmarks/programs/json_encode.rs 2>/dev/null
+./bin/lumen build benchmarks/programs/json_encode.lm -o bin/json-lumen 2>/dev/null
+
+echo "==> Building math workloads (fib)"
+go build -o bin/fib-go ./benchmarks/programs/gofib
+cc -O2 -o bin/fib-c benchmarks/programs/fib.c
+rustc -O -o bin/fib-rust benchmarks/programs/fib.rs 2>/dev/null
+./bin/lumen build benchmarks/programs/fib.lm -o bin/fib-lumen 2>/dev/null
+
+echo "==> Building sort workloads"
+go build -o bin/sort-go ./benchmarks/programs/gosort
+cc -O2 -o bin/sort-c benchmarks/programs/sort_ints.c
+rustc -O -o bin/sort-rust benchmarks/programs/sort_ints.rs 2>/dev/null
+./bin/lumen build benchmarks/programs/sort_ints.lm -o bin/sort-lumen 2>/dev/null
+
+echo
+printf '%-10s | %-7s | %10s | %10s | %7s\n' workload lang median_s mean_s cv_pct
+printf '%s\n' "-----------+---------+------------+------------+--------"
+
+# HTTP workload (throughput-style). Results kept in a nested folder.
+HTTP_OUT="$OUT/http"
+mkdir -p "$HTTP_OUT"
+SCENARIOS="$SCENARIOS" PIPES="$PIPES" REPEATS="$HTTP_REPEATS" CONC="$CONC" DUR="$DUR" WARM="$WARM" \
+OUT="$HTTP_OUT" ./benchmarks/run_unbiased.sh | tee "$HTTP_OUT/summary.log"
+
+bench_workload() {
+    local workload="$1"
+    local langs="$2"
+    shift 2
+
+    local case_dir="$OUT/$workload"
+    mkdir -p "$case_dir"
+
+    local first_chk=""
+
+    for r in $(seq 1 "$REPEATS"); do
+        local order
+        order=$(rotate_langs "$langs" $((r - 1)))
+        for lang in ${order//,/ }; do
+            local vals_file="$case_dir/$lang.s"
+            local chk_file="$case_dir/$lang.chk"
+            mkdir -p "$case_dir/r${r}"
+
+            local cmd=""
+            case "$workload:$lang" in
+                json:c) cmd="./bin/json-c" ;;
+                json:rust) cmd="./bin/json-rust" ;;
+                json:go) cmd="./bin/json-go" ;;
+                json:lumen) cmd="./bin/json-lumen" ;;
+                fib:c) cmd="./bin/fib-c" ;;
+                fib:rust) cmd="./bin/fib-rust" ;;
+                fib:go) cmd="./bin/fib-go" ;;
+                fib:lumen) cmd="./bin/fib-lumen" ;;
+                sort:c) cmd="./bin/sort-c" ;;
+                sort:rust) cmd="./bin/sort-rust" ;;
+                sort:go) cmd="./bin/sort-go" ;;
+                sort:lumen) cmd="./bin/sort-lumen" ;;
+                *) echo "unsupported workload/lang: $workload/$lang" >&2; exit 1 ;;
+            esac
+
+            t=$(run_timed_cmd "$cmd" "$case_dir/r${r}/${lang}.time")
+            echo "$t" >> "$vals_file"
+
+            # Record output checksum to ensure each impl computed same result.
+            sh -c "$cmd" | shasum | awk '{print $1}' > "$case_dir/r${r}/${lang}.sha"
+            sha=$(cat "$case_dir/r${r}/${lang}.sha")
+            echo "$sha" > "$chk_file"
+            if [ -z "$first_chk" ]; then
+                first_chk="$sha"
+            fi
+            if [ "$sha" != "$first_chk" ]; then
+                echo "checksum mismatch in workload=$workload repeat=$r lang=$lang" >&2
+                exit 1
+            fi
+        done
+    done
+
+    for lang in ${langs//,/ }; do
+        vals_file="$case_dir/$lang.s"
+        [ -s "$vals_file" ] || continue
+        med=$(sort -n "$vals_file" | median_sorted_stream)
+        stats=$(stats_mean_cv < "$vals_file")
+        mean=$(echo "$stats" | awk '{print $1}')
+        cv=$(echo "$stats" | awk '{print $2}')
+        printf '%-10s | %-7s | %10s | %10s | %7s\n' "$workload" "$lang" "$med" "$mean" "$cv"
+    done
+}
+
+bench_workload json "c,rust,go,lumen"
+bench_workload fib "c,rust,go,lumen"
+bench_workload sort "c,rust,go,lumen"
+
+echo
+echo "Artifacts: $OUT"
+python3 ./benchmarks/render_fair_report.py --input "$OUT" --output "$OUT/report.html"
+echo "Visual report: $OUT/report.html"

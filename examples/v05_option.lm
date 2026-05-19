@@ -1,0 +1,27 @@
+// v0.5: enums + pattern matching, Go-shape.
+
+type IntOption enum {
+    None
+    Some(int64)
+}
+
+func unwrap_or(o IntOption, fallback int64) int64 {
+    switch o {
+    case IntOption::None: return fallback
+    case IntOption::Some(x): return x
+    }
+}
+
+func double_or_zero(o IntOption) int64 {
+    switch o {
+    case IntOption::Some(x): return x + x
+    case IntOption::None: return 0
+    }
+}
+
+func main() {
+    println(unwrap_or(IntOption::Some(42), -1))
+    println(unwrap_or(IntOption::None, 99))
+    println(double_or_zero(IntOption::Some(21)))
+    println(double_or_zero(IntOption::None))
+}

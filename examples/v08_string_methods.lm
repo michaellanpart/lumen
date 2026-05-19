@@ -1,0 +1,53 @@
+// v08_string_methods.lm — String method tests in AOT mode.
+// Build: lumen build examples/v08_string_methods.lm && ./a.out
+
+func main() {
+    var s String = "  Hello, World!  "
+    var trimmed String = s.trim()
+    println("trim:", trimmed)
+    println("len:", trimmed.len())
+    println("to_upper:", trimmed.to_upper())
+    println("to_lower:", trimmed.to_lower())
+
+    var path String = "/api/users"
+    if path.starts_with("/api") {
+        println("starts_with /api: true")
+    }
+    if path.ends_with("users") {
+        println("ends_with users: true")
+    }
+    if path.contains("users") {
+        println("contains users: true")
+    }
+
+    // slice: extract "api"
+    var sub String = path.slice(1, 4)
+    println("slice(1,4):", sub)
+
+    // replace
+    var r String = "foo bar foo"
+    println("replace foo->baz:", r.replace("foo", "baz"))
+
+    // index_of
+    var idx Option<i64> = "hello world".index_of("world")
+    if idx.is_some() {
+        println("index_of world:", idx.unwrap())
+    }
+    var idx2 Option<i64> = "hello".index_of("xyz")
+    println("index_of xyz is_none:", idx2.is_none())
+
+    // split
+    var csv String = "a,bb,ccc"
+    var parts Vec<String> = csv.split(",")
+    println("split len:", parts.len())
+    var i i64 = 0
+    for i < parts.len() {
+        println("part:", parts[i])
+        i = i + 1
+    }
+
+    // parse_int round-trip with string ops
+    var input String = "  42  "
+    var n Option<i64> = parse_int(input.trim())
+    println("parse trimmed:", n.unwrap())
+}

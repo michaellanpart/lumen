@@ -1,0 +1,13 @@
+// Should SUCCEED: p is only borrowed — never moved. v0.7 infers the
+// borrow automatically; no explicit `&` needed at call sites.
+
+type Point struct { x int64; y int64 }
+
+func sum(p *Point) int64 { return p.x + p.y }
+
+func main() {
+    p := Point{x: 1, y: 2}
+    a := sum(p)
+    b := sum(p)
+    println(a, b)
+}

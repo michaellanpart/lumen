@@ -1,0 +1,28 @@
+// v0.7 demo: parameter mutability and borrowing are inferred.
+//
+// You write `*T` and use the binding however you want; the compiler
+// decides whether the parameter (and the binding behind it) needs to
+// be mutable. No `mut`, no `&`, no `&mut` ceremony.
+
+type Counter struct {
+    value int64
+}
+
+// Read-only — compiler infers `const Counter *` for c.
+func read(c *Counter) int64 {
+    return c.value
+}
+
+// Mutating — compiler infers `Counter *` for c and forces callers
+// to pass a mutable binding (auto `&mut` at the call site).
+func bump(c *Counter) {
+    c.value = c.value + 1
+}
+
+func main() {
+    a := Counter{value: 0}
+    bump(a)
+    bump(a)
+    bump(a)
+    println("value", read(a))
+}

@@ -1,0 +1,46 @@
+// v0.3 demo: structs + methods + references, Go-shape.
+
+type Counter struct {
+    value int64
+    step  int64
+}
+
+func new_counter(step int64) Counter {
+    return Counter{value: 0, step: step}
+}
+
+func (c *Counter) get() int64 {
+    return c.value
+}
+
+func (c *Counter) tick() {
+    c.value = c.value + c.step
+}
+
+func (c Counter) doubled() int64 {
+    return c.value * 2
+}
+
+type Point struct {
+    x float64
+    y float64
+}
+
+func (p *Point) distance_sq(other *Point) float64 {
+    dx := p.x - other.x
+    dy := p.y - other.y
+    return dx*dx + dy*dy
+}
+
+func main() {
+    c := new_counter(3)
+    c.tick()
+    c.tick()
+    c.tick()
+    println("value", c.get())
+    println("doubled", c.doubled())
+
+    p := Point{x: 1.0, y: 2.0}
+    q := Point{x: 4.0, y: 6.0}
+    println("dist^2", p.distance_sq(q))
+}

@@ -1,0 +1,14 @@
+// Recursive Fibonacci, Go-shape.
+
+func fib(n int64) int64 {
+    if n < 2 { return n }
+    return fib(n-1) + fib(n-2)
+}
+
+func main() {
+    i := 0
+    for i < 10 {
+        println("fib", i, "=", fib(i))
+        i = i + 1
+    }
+}

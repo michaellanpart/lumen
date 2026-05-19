@@ -1,0 +1,15 @@
+// v0.5: switch exhaustiveness — the checker must reject this.
+
+type Color enum { Red; Green; Blue }
+
+func name(c Color) int64 {
+    switch c {
+    case Color::Red: return 0
+    case Color::Green: return 1
+    // Blue intentionally missing
+    }
+}
+
+func main() {
+    println(name(Color::Red))
+}

@@ -1,0 +1,13 @@
+// Benchmark: recursive Fibonacci in v0.6 Go-shape Lumen.
+// Avoids switch so it AOT-compiles via the C backend.
+
+func fib(n int64) int64 {
+    if n < 2 {
+        return n
+    }
+    return fib(n-1) + fib(n-2)
+}
+
+func main() {
+    println(fib(40));
+}

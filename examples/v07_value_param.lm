@@ -1,0 +1,52 @@
+// v0.7 step 4: move-vs-borrow inference. A non-Copy value parameter
+// (`p Point`, `c Counter`, `b Boxed`) that the body never mutates is
+// silently treated as a borrow by borrowck — so the caller can pass
+// the same variable multiple times, in loops, in switch arms, without
+// any `&` ceremony. C lowering remains a normal pass-by-value.
+
+type Point struct { x int64; y int64 }
+
+func take(p Point) int64 {
+    return p.x + p.y
+}
+
+type Counter struct { value int64 }
+
+func (c Counter) read() int64 {
+    return c.value
+}
+
+type Boxed enum {
+    None
+    Some(int64)
+}
+
+func unbox(b Boxed) int64 {
+    switch b {
+    case Boxed::None: return 0
+    case Boxed::Some(x): return x
+    }
+}
+
+func main() {
+    // Read-only struct param, called twice — no move error.
+    p := Point{x: 1, y: 2}
+    println(take(p), take(p))
+
+    // Same pattern inside a loop — body never re-acquires p.
+    sum := 0
+    i := 0
+    for i < 3 {
+        sum = sum + take(p)
+        i = i + 1
+    }
+    println(sum)
+
+    // Read-only value receiver: `c.read()` is borrow-like.
+    c := Counter{value: 7}
+    println(c.read(), c.read())
+
+    // Non-Copy enum scrutinee read twice — switch is read-only.
+    b := Boxed::Some(42)
+    println(unbox(b), unbox(b))
+}

@@ -1,0 +1,220 @@
+{
+  "Function": {
+    "prefix": "func",
+    "body": [
+      "func ${1:name}(${2:params}) ${3:ReturnType} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Function declaration"
+  },
+  "Function (inferred return)": {
+    "prefix": "funci",
+    "body": [
+      "func ${1:name}(${2:params}) {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Function with inferred return type"
+  },
+  "Method (value receiver)": {
+    "prefix": "method",
+    "body": [
+      "func (${1:r} ${2:Type}) ${3:name}(${4:params}) ${5:ReturnType} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Method with value receiver"
+  },
+  "Method (pointer receiver)": {
+    "prefix": "methodp",
+    "body": [
+      "func (${1:r} *${2:Type}) ${3:name}(${4:params}) ${5:ReturnType} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Method with pointer receiver"
+  },
+  "Struct type": {
+    "prefix": "struct",
+    "body": [
+      "type ${1:Name} struct {",
+      "\t${2:field} ${3:int64}",
+      "}"
+    ],
+    "description": "Struct type declaration"
+  },
+  "Enum type": {
+    "prefix": "enum",
+    "body": [
+      "type ${1:Name} enum {",
+      "\t${2:Variant}",
+      "\t${3:Tuple}(${4:int64})",
+      "}"
+    ],
+    "description": "Enum type declaration"
+  },
+  "Impl block": {
+    "prefix": "impl",
+    "body": [
+      "impl ${1:Type} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Impl block"
+  },
+  "Main function": {
+    "prefix": "main",
+    "body": [
+      "func main() {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Program entry point"
+  },
+  "Println": {
+    "prefix": "pln",
+    "body": ["println(${1:value})"],
+    "description": "println call"
+  },
+  "If": {
+    "prefix": "if",
+    "body": [
+      "if ${1:cond} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "If statement"
+  },
+  "If-Else": {
+    "prefix": "ifel",
+    "body": [
+      "if ${1:cond} {",
+      "\t$2",
+      "} else {",
+      "\t$0",
+      "}"
+    ],
+    "description": "If-else statement"
+  },
+  "For (range)": {
+    "prefix": "for",
+    "body": [
+      "for ${1:i} := ${2:0}; ${1:i} < ${3:n}; ${1:i} += 1 {",
+      "\t$0",
+      "}"
+    ],
+    "description": "C-style for loop"
+  },
+  "For (condition)": {
+    "prefix": "forc",
+    "body": [
+      "for ${1:cond} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "While-style for loop"
+  },
+  "Loop": {
+    "prefix": "loop",
+    "body": [
+      "for {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Infinite loop"
+  },
+  "Switch (enum)": {
+    "prefix": "switch",
+    "body": [
+      "switch ${1:value} {",
+      "case ${2:Variant}: $0",
+      "case ${3:Other}: ",
+      "}"
+    ],
+    "description": "Switch / pattern match"
+  },
+  "Let binding": {
+    "prefix": "let",
+    "body": ["${1:name} := ${2:value}"],
+    "description": "Short variable declaration"
+  },
+  "Var binding": {
+    "prefix": "var",
+    "body": ["var ${1:name} ${2:Type} = ${3:value}"],
+    "description": "Typed variable declaration"
+  },
+  "Return": {
+    "prefix": "ret",
+    "body": ["return ${1:value}"],
+    "description": "Return statement"
+  },
+  "Associated constructor": {
+    "prefix": "new",
+    "body": [
+      "func (${1:Type}) new(${2:params}) Self {",
+      "\tSelf{$0}",
+      "}"
+    ],
+    "description": "Associated `new` constructor"
+  },
+  "Lambda (closure)": {
+    "prefix": "lambda",
+    "body": [
+      "func(${1:param}: ${2:Type}) -> ${3:ReturnType} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Inline lambda / closure expression"
+  },
+  "For-in loop": {
+    "prefix": "forin",
+    "body": [
+      "for ${1:item} in ${2:collection} {",
+      "\t$0",
+      "}"
+    ],
+    "description": "For-in iterator loop"
+  },
+  "Match expression": {
+    "prefix": "match",
+    "body": [
+      "match ${1:value} {",
+      "\t${2:Pattern}(${3:v}) => ${4:v},",
+      "\t_ => $0,",
+      "}"
+    ],
+    "description": "Match / exhaustive pattern-match expression"
+  },
+  "Option::Some / None": {
+    "prefix": "some",
+    "body": ["Option::Some(${1:value})"],
+    "description": "Wrap a value in Option::Some"
+  },
+  "Option::None": {
+    "prefix": "none",
+    "body": ["Option::None()"],
+    "description": "Option::None value"
+  },
+  "fmt call": {
+    "prefix": "fmt",
+    "body": ["fmt(\"${1:{}}\", ${2:value})"],
+    "description": "Format a string with fmt()"
+  },
+  "HTTP serve": {
+    "prefix": "http",
+    "body": [
+      "http_serve(\"${1:0.0.0.0}\", ${2:8080}, ${3:\"Hello\"});"
+    ],
+    "description": "Start a basic HTTP server"
+  },
+  "Spawn task": {
+    "prefix": "spawn",
+    "body": [
+      "spawn {",
+      "\t$0",
+      "}"
+    ],
+    "description": "Spawn a concurrent task"
+  }
+}

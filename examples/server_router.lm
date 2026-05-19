@@ -1,0 +1,31 @@
+// A routed HTTP API server compiled natively via AOT (http_serve_req).
+//
+// Build: ./bin/lumen build examples/server_router.lm -o bin/server-router
+// Run:   ./bin/server-router
+// Test:
+//   curl http://127.0.0.1:8080/
+//   curl http://127.0.0.1:8080/health
+//   curl -X POST -d 'ping' http://127.0.0.1:8080/echo
+//   curl http://127.0.0.1:8080/missing
+
+// Request and Response are builtin types — no need to declare them.
+
+func handle(req Request) Response {
+    if req.path == "/" {
+        return Response::ok("Welcome to the Lumen API.\n")
+    }
+    if req.path == "/health" {
+        return Response::ok("ok\n")
+    }
+    if req.path == "/echo" {
+        if req.method == "POST" {
+            return Response::ok(req.body)
+        }
+        return Response::with_status(405, "use POST\n")
+    }
+    return Response::with_status(404, "not found\n")
+}
+
+func main() {
+    http_serve_req("127.0.0.1", 8080, handle)
+}

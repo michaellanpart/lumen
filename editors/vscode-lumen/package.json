@@ -1,0 +1,77 @@
+{
+  "name": "vscode-lumen",
+  "displayName": "Lumen",
+  "description": "Syntax highlighting, snippets, and editor support for the Lumen programming language (.lm).",
+  "version": "0.2.0",
+  "publisher": "lumen-lang",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.75.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Snippets"
+  ],
+  "keywords": [
+    "lumen",
+    "lm",
+    "language"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lumen-lang/lumen"
+  },
+  "main": "./extension.js",
+  "activationEvents": [
+    "onLanguage:lumen"
+  ],
+  "dependencies": {
+    "vscode-languageclient": "^8.1.0"
+  },
+  "contributes": {
+    "languages": [
+      {
+        "id": "lumen",
+        "aliases": [
+          "Lumen",
+          "lumen"
+        ],
+        "extensions": [
+          ".lm"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "lumen",
+        "scopeName": "source.lumen",
+        "path": "./syntaxes/lumen.tmLanguage.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "lumen",
+        "path": "./snippets/lumen.json"
+      }
+    ],
+    "configurationDefaults": {
+      "[lumen]": {
+        "editor.tabSize": 4,
+        "editor.insertSpaces": true,
+        "editor.detectIndentation": false,
+        "editor.semanticHighlighting.enabled": true
+      }
+    },
+    "configuration": {
+      "title": "Lumen",
+      "properties": {
+        "lumen.lspBinaryPath": {
+          "type": "string",
+          "default": "lumen-lsp",
+          "description": "Path to the lumen-lsp binary. Defaults to 'lumen-lsp' (must be on PATH). Override if you built it to a specific location, e.g. /usr/local/bin/lumen-lsp."
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,84 @@
+// A tiny HTTP API server, written in Lumen.
+//
+// Run with:
+//     lumen run examples/server.lm
+// Then in another terminal:
+//     curl http://127.0.0.1:8080/
+//     curl http://127.0.0.1:8080/todos
+//     curl -X POST -d 'ping' http://127.0.0.1:8080/echo
+//
+// The `http::` and `Response::` constructors are runtime builtins (see
+// internal/interp/http.go). Once Lumen has its own async runtime and
+// stdlib (roadmap v0.6), these will be implemented in pure Lumen.
+
+struct Request {
+    method:  String,
+    path:    String,
+    query:   String,
+    body:    String,
+}
+
+struct Response {
+    status:       i64,
+    body:         String,
+    content_type: String,
+}
+
+struct Todo {
+    id:    i64,
+    title: String,
+    done:  bool,
+}
+
+// --- Handlers ----------------------------------------------------------------
+
+fn handle_root(req: Request) -> Response {
+    Response::ok("Welcome to the Lumen API.  Try GET /todos or POST /echo.\n")
+}
+
+fn handle_health(req: Request) -> Response {
+    Response::json(Health { ok: true, version: "0.1.0" })
+}
+
+fn handle_todos(req: Request) -> Response {
+    let todos = Vec(
+        Todo { id: 1, title: "ship Lumen v0.2 (type inference)", done: false },
+        Todo { id: 2, title: "land borrow checker",              done: false },
+        Todo { id: 3, title: "wire LLVM backend",                done: false },
+        Todo { id: 4, title: "celebrate first self-hosted run",  done: false },
+    );
+    Response::json(todos)
+}
+
+fn handle_echo(req: Request) -> Response {
+    if req.method == "POST" {
+        Response::ok(req.body)
+    } else {
+        Response::with_status(405, "use POST\n")
+    }
+}
+
+fn handle_404(req: Request) -> Response {
+    Response::with_status(404, "not found: " + req.path + "\n")
+}
+
+struct Health { ok: bool, version: String }
+
+// --- Entry point -------------------------------------------------------------
+
+fn main() {
+    let routes = Vec(
+        ("GET",  "/",         handle_root),
+        ("GET",  "/health",   handle_health),
+        ("GET",  "/todos",    handle_todos),
+        ("POST", "/echo",     handle_echo),
+    );
+
+    println("Lumen API server listening on http://127.0.0.1:8080");
+    println("  GET  /         -> welcome message");
+    println("  GET  /health   -> JSON health check");
+    println("  GET  /todos    -> JSON todo list");
+    println("  POST /echo     -> echoes request body");
+
+    http::serve("127.0.0.1:8080", routes, handle_404);
+}

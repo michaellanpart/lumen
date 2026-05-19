@@ -1,0 +1,35 @@
+// v0.4.2: aliasing tracking (& vs &mut).
+//
+// The borrow checker tracks let-bound references: while a &mut borrow
+// is live, no other read/move/borrow of the same place is allowed;
+// multiple & borrows of the same place coexist freely. Borrows die
+// when their owning binding goes out of lexical scope.
+//
+// The companion tests in internal/borrowck/borrowck_test.go exercise
+// the conflict-detection rules; this example demonstrates valid usage
+// that compiles cleanly.
+
+type Inner struct {
+    v int64
+}
+
+type Outer struct {
+    a Inner
+    b Inner
+}
+
+func main() {
+    o := Outer{a: Inner{v: 10}, b: Inner{v: 20}}
+
+    // Multiple shared borrows of the same place: OK.
+    r1 := &o
+    r2 := &o
+    println(r1.a.v, r2.b.v)                // 10 20
+
+    // Disjoint field borrows can mix shared and mutable safely:
+    // &o.a and &mut o.b touch different memory.
+    p := Outer{a: Inner{v: 1}, b: Inner{v: 2}}
+    ra := &p.a
+    rb := &mut p.b
+    println(ra.v, rb.v)                    // 1 2
+}

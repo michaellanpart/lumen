@@ -1,0 +1,15 @@
+// Dynamic-handler HTTP benchmark server in Lumen.
+// Uses the http_serve_fn builtin and shared service state.
+
+type Service struct {
+    body string
+}
+
+func handle(svc *Service) string {
+    return svc.body
+}
+
+func main() {
+    svc := Service{body: "hello\n"}
+    http_serve_fn("127.0.0.1", 8080, handle, &svc)
+}

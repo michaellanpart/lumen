@@ -1,0 +1,63 @@
+// v07_option_result.lm — Option<T> and Result<T, E> in AOT mode.
+// Build: lumen build examples/v07_option_result.lm && ./a.out
+
+func find(v Vec<i64>, target i64) Option<i64> {
+    var i i64 = 0
+    for i < v.len() {
+        if v[i] == target { return Option::Some(v[i]) }
+        i = i + 1
+    }
+    return Option::None()
+}
+
+func divide(a i64, b i64) Result<i64, String> {
+    if b == 0 { return Result::Err("division by zero") }
+    return Result::Ok(a / b)
+}
+
+func main() {
+    var v Vec<i64> = Vec::new()
+    v.push(10)
+    v.push(20)
+    v.push(30)
+
+    // Option: found case
+    var found Option<i64> = find(v, 20)
+    if found.is_some() {
+        println("found:", found.unwrap())
+    }
+
+    // Option: missing case with unwrap_or — rebuild the vec
+    var v2 Vec<i64> = Vec::new()
+    v2.push(10)
+    v2.push(20)
+    var missing Option<i64> = find(v2, 99)
+    println("missing unwrap_or:", missing.unwrap_or(-1))
+
+    // Option: is_none
+    if missing.is_none() {
+        println("correctly got None")
+    }
+
+    // Result: success
+    var r Result<i64, String> = divide(10, 2)
+    if r.is_ok() {
+        println("10 / 2 =", r.unwrap())
+    }
+
+    // Result: error
+    var r2 Result<i64, String> = divide(5, 0)
+    if r2.is_err() {
+        println("error:", r2.unwrap_err())
+    }
+
+    // Result::unwrap_or
+    println("5 / 0 unwrap_or 0:", divide(5, 0).unwrap_or(0))
+
+    // parse_int builtin
+    var n Option<i64> = parse_int("42")
+    println("parse 42:", n.unwrap())
+
+    var bad Option<i64> = parse_int("xyz")
+    println("parse xyz unwrap_or -1:", bad.unwrap_or(-1))
+}

@@ -1,0 +1,5 @@
+func main() {
+    xs := [5, 1, 9]
+    xs[1] = 7
+    println(xs[0], xs[1], xs[2], len(xs))
+}

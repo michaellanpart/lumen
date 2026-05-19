@@ -1,0 +1,22 @@
+// Example: hoisted, read-only service shared across HTTP handlers.
+//
+// The Greeter is built once in main(), and a `&Greeter` flows through
+// http_serve_fn into every invocation of `handle`. Borrow checker proves
+// that this sharing is safe: handlers receive `&Greeter` (immutable), so
+// the runtime can dispatch to as many threads as it wants with zero
+// synchronization.
+//
+// Run: ./bin/lumen build examples/v07_service.lm -o /tmp/svc && /tmp/svc
+// Hit: curl -s localhost:8080
+type Greeter struct {
+    motd string
+}
+
+func handle(svc *Greeter) string {
+    return svc.motd
+}
+
+func main() {
+    g := Greeter{motd: "hello from a hoisted Lumen service\n"}
+    http_serve_fn("127.0.0.1", 8080, handle, &g)
+}

@@ -1,0 +1,5 @@
+// Lumen "hello world"
+
+func main() {
+    println("Hello, Lumen!")
+}
